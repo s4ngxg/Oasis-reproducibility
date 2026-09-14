@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: "OASIS Reproducibility Artifact"
+message: "Please cite the accompanying OASIS paper when using this artifact."
+type: software
+authors:
+  - name: "OASIS artifact authors"
+version: "1.0.1"
+date-released: 2026-09-14
+license: MIT
+repository-code: "https://github.com/s4ngxg/oasis-reproducibility-artifact"
+abstract: >-
+  Source code and validation harness for the OASIS Pre-swap coordination
+  artifact, including a native C11/RELIC implementation, lifecycle checks,
+  controlled ablations, and two-host campaign scripts.

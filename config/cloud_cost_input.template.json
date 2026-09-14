@@ -1,0 +1,53 @@
+{
+  "schema": "oasis-cloud-cost-input-v1",
+  "template": true,
+  "currency": "USD",
+  "pricing": {
+    "source_url": "https://aws.amazon.com/ec2/pricing/on-demand/",
+    "retrieved_at_utc": "REPLACE_WITH_UTC_TIMESTAMP",
+    "notes": "Record the exact public price pages or billing-export source used."
+  },
+  "campaigns": [
+    {
+      "campaign_id": "REPLACE_WITH_CAMPAIGN_ID",
+      "route": "eu_to_us",
+      "measured_runs": 0,
+      "warmup_runs": 0,
+      "failed_runs": 0,
+      "compute": [
+        {
+          "region": "eu-central-1",
+          "description": "initiator instance-hours, including warm-ups and failed attempts",
+          "quantity": 0,
+          "unit": "instance-hour",
+          "unit_price_usd": 0
+        },
+        {
+          "region": "us-east-1",
+          "description": "responder instance-hours, including warm-ups and failed attempts",
+          "quantity": 0,
+          "unit": "instance-hour",
+          "unit_price_usd": 0
+        }
+      ],
+      "storage": [
+        {
+          "region": "all",
+          "description": "EBS storage attributable to the campaign",
+          "quantity": 0,
+          "unit": "GB-month",
+          "unit_price_usd": 0
+        }
+      ],
+      "data_transfer": [
+        {
+          "region": "eu-central-1_to_us-east-1",
+          "description": "cross-region data transfer attributable to the campaign",
+          "quantity": 0,
+          "unit": "GB",
+          "unit_price_usd": 0
+        }
+      ]
+    }
+  ]
+}

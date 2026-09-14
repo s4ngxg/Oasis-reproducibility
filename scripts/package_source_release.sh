@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+PARENT=$(dirname "$ROOT")
+BASE=$(basename "$ROOT")
+OUTPUT=${1:-"$PARENT/$BASE-source.tar.gz"}
+SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-0}
+if [[ ! $SOURCE_DATE_EPOCH =~ ^[0-9]+$ ]]; then
+  echo "error: SOURCE_DATE_EPOCH must be a nonnegative integer" >&2
+  exit 1
+fi
+
+case "$OUTPUT" in
+  /*) ;;
+  *) OUTPUT="$PWD/$OUTPUT" ;;
+esac
+
+OUTPUT=$(realpath -m -- "$OUTPUT")
+case "$OUTPUT" in
+  "$ROOT"|"$ROOT"/*)
+    echo "error: source archive must be outside the repository" >&2
+    exit 1 ;;
+esac
+
+mkdir -p "$(dirname "$OUTPUT")"
+TEMPORARY=$(mktemp "$OUTPUT.tmp.XXXXXXXX")
+trap 'rm -f -- "$TEMPORARY"' EXIT
+
+tar \
+  --exclude="$BASE/.deps" \
+  --exclude="$BASE/vendor/paraswap/two-party computation/.codex" \
+  --exclude="$BASE/.git" \
+  --exclude="$BASE/results" \
+  --exclude="$BASE/tls" \
+  --exclude="$BASE/auth" \
+  --exclude='*_secret.key' \
+  --exclude='*.pem' \
+  --exclude='*.crt' \
+  --exclude='*.pcap' \
+  --exclude='*.pcapng' \
+  --exclude='*.log' \
+  --exclude='*.pid' \
+  --exclude="$BASE/vendor/paraswap/two-party computation/.local-deps" \
+  --exclude="$BASE/vendor/paraswap/two-party computation/build-*" \
+  --exclude="$BASE/vendor/paraswap/two-party computation/bin" \
+  --exclude="$BASE/vendor/paraswap/two-party computation/src/preswap_client.c" \
+  --exclude="$BASE/vendor/paraswap/two-party computation/src/preswap_server.c" \
+  --exclude="$BASE/vendor/paraswap/vtd/.vscode" \
+  --exclude="$BASE/vendor/paraswap/vtd/lib" \
+  --exclude="$BASE/vendor/paraswap/vtd/vtd" \
+  --exclude="$BASE/vendor/oasis-linear/build" \
+  --exclude="$BASE/vendor/oasis-linear/bin" \
+  --exclude='__pycache__' \
+  --exclude='*.pyc' \
+  --sort=name \
+  --mtime="@$SOURCE_DATE_EPOCH" \
+  --owner=0 --group=0 --numeric-owner \
+  -czf "$TEMPORARY" -C "$PARENT" "$BASE"
+
+if tar -tzf "$TEMPORARY" | grep -E \
+  '/(\.deps|\.git|\.vscode|results|tls|auth|\.local-deps|build-[^/]+|bin|__pycache__)(/|$)|/preswap_(client|server)\.c$|/vtd/vtd$|\.pyc$|\.(a|o|so|pem|crt|pcap|pcapng|log|pid)$' \
+  >/dev/null; then
+  echo "error: generated archive contains excluded runtime artifacts" >&2
+  rm -f "$TEMPORARY"
+  exit 1
+fi
+
+UNEXPECTED_KEYS=$(tar -tzf "$TEMPORARY" | grep -E '\.key$' | grep -Ev \
+  "^$BASE/vendor/paraswap/two-party computation/keys/(alice|bob|tumbler)\.key$" || true)
+if [[ -n $UNEXPECTED_KEYS ]]; then
+  echo "error: generated archive contains non-fixture key material:" >&2
+  printf '%s\n' "$UNEXPECTED_KEYS" >&2
+  rm -f "$TEMPORARY"
+  exit 1
+fi
+
+mv "$TEMPORARY" "$OUTPUT"
+(cd "$(dirname "$OUTPUT")" && \
+  sha256sum "$(basename "$OUTPUT")" > "$(basename "$OUTPUT").sha256")
+echo "wrote=$OUTPUT"
+echo "wrote=$OUTPUT.sha256"

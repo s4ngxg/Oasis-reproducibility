@@ -1,0 +1,247 @@
+{
+  "schema": "oasis-paper-claim-evidence-v1",
+  "evidence": [
+    {
+      "label": "eu_primary",
+      "kind": "timing",
+      "schema": "oasis-preswap-cloud-analysis-v5",
+      "campaign_id": "preswap-eu-primary-v3-final",
+      "route": "eu_to_us",
+      "sha256": "f9768bada2f51f0b65aa861f6b90f2733de70a678b3298353ed1cbf1b80bebf2",
+      "source_path": "results/raw-analysis/eu_primary.json"
+    },
+    {
+      "label": "eu_load",
+      "kind": "timing",
+      "schema": "oasis-preswap-cloud-analysis-v5",
+      "campaign_id": "preswap-eu-load-v3-final",
+      "route": "eu_to_us",
+      "sha256": "a3029c7b61cbd522e31a21ca0c97a44f220d3d8841f450a7b3895adf74e93ff0",
+      "source_path": "results/raw-analysis/eu_load.json"
+    },
+    {
+      "label": "sg_primary",
+      "kind": "timing",
+      "schema": "oasis-preswap-cloud-analysis-v5",
+      "campaign_id": "preswap-sg-primary-v3-final",
+      "route": "sg_to_us",
+      "sha256": "de5cfd4fd9eb45c1c226c7f08501e03b464227e1bf97ac6265945761da13bc13",
+      "source_path": "results/raw-analysis/sg_primary.json"
+    },
+    {
+      "label": "sg_load",
+      "kind": "timing",
+      "schema": "oasis-preswap-cloud-analysis-v5",
+      "campaign_id": "preswap-sg-load-v3-final",
+      "route": "sg_to_us",
+      "sha256": "16924936ddb0d2e153d552c90b23d02a4e9b6b3baacae817916effb04b0fa6f0",
+      "source_path": "results/raw-analysis/sg_load.json"
+    },
+    {
+      "label": "eu_allocation",
+      "kind": "system",
+      "schema": "oasis-preswap-system-profile-v1",
+      "campaign_id": "preswap-eu-allocation-v3-final",
+      "route": "eu_to_us",
+      "sha256": "3196fc03df475c9e12ea6121281f4ef455dff9c13cb84978a12f6127a8c4400e",
+      "source_path": "results/raw-analysis/eu_allocation.json"
+    },
+    {
+      "label": "sg_allocation",
+      "kind": "system",
+      "schema": "oasis-preswap-system-profile-v1",
+      "campaign_id": "preswap-sg-allocation-v3-final",
+      "route": "sg_to_us",
+      "sha256": "ea00532019999ec9665378ed87bd8e1e186ccd3dd55d6d16e6271f2504349cfc",
+      "source_path": "results/raw-analysis/sg_allocation.json"
+    },
+    {
+      "label": "eu_syscall",
+      "kind": "system",
+      "schema": "oasis-preswap-system-profile-v1",
+      "campaign_id": "preswap-eu-syscall-v3-final",
+      "route": "eu_to_us",
+      "sha256": "c30ea0789c15da45ba8be6f3b6f81952ceca2ae59a79e28dbad6770201c68832",
+      "source_path": "results/raw-analysis/eu_syscall.json"
+    },
+    {
+      "label": "sg_syscall",
+      "kind": "system",
+      "schema": "oasis-preswap-system-profile-v1",
+      "campaign_id": "preswap-sg-syscall-v3-final",
+      "route": "sg_to_us",
+      "sha256": "3e5d9a7d219baf411e2e958b682a19e26d768b0c0b5f1d035fa6f9b9cb46b67c",
+      "source_path": "results/raw-analysis/sg_syscall.json"
+    },
+    {
+      "label": "eu_client",
+      "kind": "pcap",
+      "schema": "oasis-preswap-pcap-profile-v3",
+      "campaign_id": "preswap-eu-pcap-v3-final",
+      "route": "eu_to_us",
+      "sha256": "f0c2e24caa4e380eab3475e2022089cf479cf96acb3a0f096e67b8bc28b50392",
+      "source_path": "results/raw-analysis/eu_client_pcap.json"
+    },
+    {
+      "label": "eu_server",
+      "kind": "pcap",
+      "schema": "oasis-preswap-pcap-profile-v3",
+      "campaign_id": "preswap-eu-pcap-v3-final",
+      "route": "eu_to_us",
+      "sha256": "377fff9635925ce7d87e98cfab925d3f69b9c86761ef7dac7585def2b2ba9687",
+      "source_path": "results/raw-analysis/eu_server_pcap.json"
+    },
+    {
+      "label": "sg_client",
+      "kind": "pcap",
+      "schema": "oasis-preswap-pcap-profile-v3",
+      "campaign_id": "preswap-sg-pcap-v3-final",
+      "route": "sg_to_us",
+      "sha256": "3c147ab6e28e69aa3c19fbc0b0d2149790f1dcc1178555e4d4621ca4b9b033a2",
+      "source_path": "results/raw-analysis/sg_client_pcap.json"
+    },
+    {
+      "label": "sg_server",
+      "kind": "pcap",
+      "schema": "oasis-preswap-pcap-profile-v3",
+      "campaign_id": "preswap-sg-pcap-v3-final",
+      "route": "sg_to_us",
+      "sha256": "3e09ba1fb86b2ef0c29106f472928e0ad5bb6bbfc85d757b7e86dd22f78b4d30",
+      "source_path": "results/raw-analysis/sg_server_pcap.json"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "timing_and_tail_latency",
+      "evidence": [
+        "eu_primary",
+        "eu_load",
+        "sg_primary",
+        "sg_load"
+      ],
+      "fields": [
+        "pair_p50_ms",
+        "pair_p95_ms",
+        "pair_p99_ms",
+        "pair_p95_ci95_ms",
+        "pair_p99_ci95_ms",
+        "median_reduction_pct",
+        "median_reduction_ci95_pct",
+        "paired_trials",
+        "wilcoxon_signed_rank_p",
+        "holm_adjusted_p",
+        "holm_family",
+        "holm_family_size",
+        "rank_biserial_effect",
+        "rank_biserial_ci95"
+      ],
+      "assets": [
+        "timing_summary.csv",
+        "paired_effects.csv",
+        "paper_results.tex"
+      ]
+    },
+    {
+      "claim_id": "throughput_goodput_and_system_resources",
+      "evidence": [
+        "eu_primary",
+        "eu_load",
+        "sg_primary",
+        "sg_load"
+      ],
+      "fields": [
+        "median_completed_pairs_per_second",
+        "median_application_goodput_mbps",
+        "median_client_cpu_pct",
+        "median_server_cpu_pct",
+        "median_client_cpu_seconds_per_workload",
+        "median_server_cpu_seconds_per_workload",
+        "median_total_cpu_seconds_per_workload",
+        "median_client_cpu_ms_per_completed_pair",
+        "median_server_cpu_ms_per_completed_pair",
+        "median_total_cpu_ms_per_completed_pair",
+        "median_client_process_peak_rss_sum_kb",
+        "median_server_process_peak_rss_sum_kb",
+        "median_client_context_switches",
+        "median_server_context_switches"
+      ],
+      "assets": [
+        "timing_summary.csv",
+        "figures/systems_profile.png",
+        "paper_results.tex"
+      ]
+    },
+    {
+      "claim_id": "paired_statistical_inference",
+      "evidence": [
+        "eu_primary",
+        "eu_load",
+        "sg_primary",
+        "sg_load"
+      ],
+      "fields": [
+        "paired_trials",
+        "median_difference_ms",
+        "median_difference_ci95_ms",
+        "median_reduction_pct",
+        "median_reduction_ci95_pct",
+        "wilcoxon_signed_rank_p",
+        "holm_adjusted_p",
+        "holm_family",
+        "holm_family_size",
+        "rank_biserial_effect",
+        "rank_biserial_ci95"
+      ],
+      "assets": [
+        "paired_effects.csv",
+        "FINAL_EVIDENCE_REPORT.md"
+      ]
+    },
+    {
+      "claim_id": "isolated_profiler_counts",
+      "evidence": [
+        "eu_allocation",
+        "sg_allocation",
+        "eu_syscall",
+        "sg_syscall"
+      ],
+      "fields": [
+        "profiling_mode",
+        "summary"
+      ],
+      "assets": [
+        "systems_profiles.csv"
+      ]
+    },
+    {
+      "claim_id": "transport_packet_accounting",
+      "evidence": [
+        "eu_client",
+        "eu_server",
+        "sg_client",
+        "sg_server"
+      ],
+      "fields": [
+        "tcp_segments",
+        "payload_bytes",
+        "retransmissions"
+      ],
+      "assets": []
+    },
+    {
+      "claim_id": "cloud_experiment_cost",
+      "evidence": [],
+      "fields": [
+        "compute_usd",
+        "storage_usd",
+        "data_transfer_usd",
+        "grand_total_usd",
+        "warmup_runs",
+        "failed_runs"
+      ],
+      "assets": [
+        "FINAL_EVIDENCE_REPORT.md"
+      ]
+    }
+  ]
+}

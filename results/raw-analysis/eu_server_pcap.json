@@ -1,0 +1,30 @@
+{
+  "schema": "oasis-preswap-pcap-profile-v3",
+  "role": "server",
+  "campaign_id": "preswap-eu-pcap-v3-final",
+  "route": "eu_to_us",
+  "local_ip": "172.31.75.33",
+  "service_port": 9000,
+  "transport": "ZeroMQ CURVE over TCP",
+  "tls_session_reuse": "not-applicable-native-transport-is-not-tls",
+  "pcap_sha256": "c8113891a75996b38eca30999acdb86541b6df52042347766ea2da046098df4e",
+  "tshark_version": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)",
+  "metrics": {
+    "tcp_connections": 125,
+    "tcp_segments": 4085,
+    "sent_tcp_segments": 2119,
+    "received_tcp_segments": 1966,
+    "tcp_payload_packets": 2583,
+    "sent_tcp_payload_bytes": 462768,
+    "received_tcp_payload_bytes": 508188,
+    "tcp_retransmission_packets": 0,
+    "payload_direction_changes": 1630,
+    "tcp_ack_rtt_sample_count": 2436,
+    "tcp_ack_rtt_min_ms": 0.004,
+    "tcp_ack_rtt_p50_ms": 17.944499999999998,
+    "tcp_ack_rtt_p95_ms": 92.41874999999999,
+    "tcp_ack_rtt_p99_ms": 94.12825000000001,
+    "tcp_ack_rtt_max_ms": 131.885,
+    "tls_records": "not-applicable-zero-mq-curve"
+  }
+}

@@ -1,0 +1,78 @@
+name: full-cycle-native-ci
+
+on:
+  push:
+    branches: [full-cycle-baseline-oasis, full-cycle-correctness-fixes, full-cycle-deadline-supervisor-fixes]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      BUILD_JOBS: 2
+      PARTICIPANTS: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap pinned native dependencies
+        run: make bootstrap
+
+      - name: Verify pinned source and cryptographic mappings
+        run: make verify
+
+      - name: Build native binaries
+        run: make native-build
+
+      - name: Run restart-safe ledger snapshot gate
+        run: '"vendor/paraswap/two-party computation/bin/host_ledger_test"'
+
+      - name: Run Python unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          make unit 2>&1 | tee unit-test.log
+
+      - name: Upload unit test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-log
+          path: unit-test.log
+          if-no-files-found: error
+
+      - name: Run repository integration tests
+        run: make test
+
+      - name: Run retained full-cycle quick gate
+        run: make full-cycle-smoke-quick PARTICIPANTS=3
+
+      - name: Run retained full-cycle baseline and OASIS gates
+        run: make full-cycle-smoke PARTICIPANTS=3
+
+      - name: Compare all-honest full cycles
+        run: |
+          mkdir -p results
+          make full-cycle-compare PARTICIPANTS=3 REPETITIONS=3 OUTCOME=--all-honest \
+            FULL_CYCLE_OUT=results/full-cycle-all-honest.json
+
+      - name: Compare recovery full cycles
+        run: |
+          make full-cycle-compare PARTICIPANTS=3 REPETITIONS=3 OUTCOME=--recover-cycle \
+            FULL_CYCLE_OUT=results/full-cycle-recovery.json
+
+      - name: Upload full-cycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-cycle-evidence
+          if-no-files-found: warn
+          path: |
+            results/full-cycle-all-honest.json
+            results/full-cycle-recovery.json

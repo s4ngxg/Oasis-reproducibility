@@ -1,0 +1,35 @@
+{
+  "artifact": "ParaSwap USENIX Security 2025 reproducibility artifact",
+  "doi": "10.5281/zenodo.15594022",
+  "source_commit": "e817a33cf8d1efa54cc06d41927f82b0f3e4f4d2",
+  "upstream_files": {
+    "vendor/paraswap/README.upstream.md": "d7b498242439f74d7d4546693fd288013be9475ff9adcb0a31aecdc7abb5f1d3",
+    "vendor/paraswap/two-party computation/include/bob.h": "5cbecc7014a2aa803318a988ab6c3a28707e2b639281c0dfda808d589fc74985",
+    "vendor/paraswap/two-party computation/include/tumbler.h": "dbcb37b89b9051b48106928caab2f64bb9cc97ff723df13e32678d7c554f1f56",
+    "vendor/paraswap/two-party computation/include/types.h": "7b8ab6c871537c4a82bc3f5e24a71cfd957148086efa823a27ad3e05c0d99556",
+    "vendor/paraswap/two-party computation/include/util.h": "cf08f36cd6fad73a56859291068df66b5bca534f618734686e963e67442af693",
+    "vendor/paraswap/two-party computation/keys/alice.key": "61a96e4e9e1e871783a84453e41e6418d6aa95124788ed80e9ea04a7cf52de4e",
+    "vendor/paraswap/two-party computation/keys/bob.key": "c303c1c10485c815e073543591f4cb67815f21474308026f032ecd26fee367e3",
+    "vendor/paraswap/two-party computation/keys/tumbler.key": "41bd39babc2fdd6ea4410cdfeeaf8765c1410f3a76d2359e19ae3dde90df0503",
+    "vendor/paraswap/two-party computation/src/bob.c": "6519a375e96eeda2b8dfd48c9ba0e8eb7c9adada69d0a8c1ef0bd27883b65c3b",
+    "vendor/paraswap/two-party computation/src/tumbler.c": "25dd6fdf045ed41adf9cb774b15c6b934b1b277647c1daf4b9f02132becd193c",
+    "vendor/paraswap/vtd/vtd.c": "79ae48dcdd5aa92dad6404267e31687ae4781312f8521d4939b2704d5456b1ec"
+  },
+  "adapted_upstream_files": {
+    "vendor/paraswap/two-party computation/CMakeLists.txt": {
+      "upstream_sha256": "b6fd2c17fb43994a3e782d8839144f02734703282c7b6638587cf6f8ce0577d0",
+      "integrated_sha256": "4853466f1f67f45bab4b1185835ae525d35c5746a69def93a1d8f8ee43388835",
+      "purpose": "add repository-local dependency include/library paths and runtime search paths"
+    },
+    "vendor/paraswap/two-party computation/src/CMakeLists.txt": {
+      "upstream_sha256": "5b7eb12a4a184af24b2a4b7d933684cfa5140933e4209203bea6e1d6c74b3245",
+      "integrated_sha256": "72e98d4ebf3072253db2cb219a825079a961a2ab5f0c2c86e7d0f7412af790fa",
+      "purpose": "retain reference targets and add separately named OASIS adapter, gateway, profiling, and test targets"
+    },
+    "vendor/paraswap/two-party computation/src/util.c": {
+      "upstream_sha256": "348e727e10631f9711e6a987e33ecf2ae16a97706c0f3d28b10fd0f010752e0a",
+      "integrated_sha256": "29ee8927fd94c312b40e3e2cfbf7ee57645d8a3a357a327e5537f4b93da3f6e4",
+      "purpose": "resolve the unchanged fixture-key encoding from both source-tree and binary working directories"
+    }
+  }
+}

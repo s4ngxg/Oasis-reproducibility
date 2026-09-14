@@ -1,0 +1,22 @@
+results/*
+!results/README.md
+!results/paper-assets/
+!results/paper-assets/**
+!results/raw-analysis/
+!results/raw-analysis/**
+!results/cloud-evidence/
+results/cloud-evidence/*
+!results/cloud-evidence/README.md
+!results/cloud-evidence/SHA256SUMS.txt
+tls/
+auth/
+*_secret.key
+.matplotlib/
+.deps/
+vendor/paraswap/two-party computation/.local-deps/
+vendor/paraswap/two-party computation/build-full/
+vendor/paraswap/two-party computation/bin/
+vendor/oasis-linear/build/
+vendor/oasis-linear/bin/
+__pycache__/
+*.pyc
