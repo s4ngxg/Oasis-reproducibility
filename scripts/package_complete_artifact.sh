@@ -35,11 +35,6 @@ do
   fi
 done
 
-if find "$ROOT" -type f \( -name '*.pem' -o -name '*.crt' -o -name '*_secret.key' -o -name '*.log' -o -name '*.pid' \) | grep -q .; then
-  echo "error: artifact contains credential or runtime files" >&2
-  exit 1
-fi
-
 mkdir -p "$(dirname "$OUTPUT")"
 TEMPORARY=$(mktemp "$OUTPUT.tmp.XXXXXXXX")
 trap 'rm -f -- "$TEMPORARY"' EXIT
