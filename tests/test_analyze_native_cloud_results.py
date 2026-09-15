@@ -238,7 +238,7 @@ class NativeAuditTests(unittest.TestCase):
         self.assertEqual(analyze_cloud_results.rank_biserial([-1, -2, -3]), -1.0)
         self.assertEqual(analyze_cloud_results.rank_biserial([0, 0]), 0.0)
 
-    def test_holm_classifies_p_equals_one_as_primary(self):
+    def test_holm_uses_scientific_families(self):
         rows = [
             {"participants": 8, "concurrent_pairs": 1,
              "comparison": "complete_method_vs_reference",
@@ -246,12 +246,17 @@ class NativeAuditTests(unittest.TestCase):
             {"participants": 8, "concurrent_pairs": 64,
              "comparison": "complete_method_vs_reference",
              "wilcoxon_signed_rank_p": 0.02},
+            {"participants": 8, "concurrent_pairs": 1,
+             "comparison": "batch_verification_with_batch_joint_presigning",
+             "wilcoxon_signed_rank_p": 0.03},
         ]
         analyze_cloud_results.apply_holm_families(rows)
         self.assertEqual(rows[0]["holm_family"],
-                         "primary:complete_method_vs_reference")
+                         "primary:H3-secondary-system-contrast")
         self.assertEqual(rows[1]["holm_family"],
-                         "load:8:complete_method_vs_reference")
+                         "high-load:H3-secondary-system-contrast")
+        self.assertEqual(rows[2]["holm_family"],
+                         "primary:H1-aggregate-within-shared")
         self.assertEqual(rows[0]["holm_family_size"], 1)
         self.assertEqual(rows[1]["holm_family_size"], 1)
 

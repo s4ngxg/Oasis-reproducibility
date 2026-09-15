@@ -10,7 +10,7 @@
     "bootstrap_interval": "unadjusted percentile 95% paired bootstrap",
     "tail_interval": "unadjusted percentile 95% hierarchical bootstrap resampling complete trial blocks; pair observations within a trial are not treated as independent",
     "paired_test": "two-sided Wilcoxon signed-rank; zero_method=wilcox; correction=false; method=auto",
-    "holm_families": "primary: one comparison across n within a route; load: one comparison across p for fixed route and n",
+    "holm_families": "analysis-pipeline-defined H1 aggregate-within-shared, H2 envelope-beyond-phase-coalescing, H3 secondary system contrast, and one exploratory family for remaining contrasts; primary and high-load estimands are separate",
     "effect_size": "matched-pairs rank-biserial correlation with paired-bootstrap 95% interval",
     "sample_size_policy": {
       "primary": "100 measured paired trials after 10 warm-ups",
@@ -2076,7 +2076,7 @@
         "median_difference": 6298261552784239606,
         "rank_biserial": 15756654039036028550
       },
-      "holm_family": "primary:complete_method_vs_reference",
+      "holm_family": "primary:H3-secondary-system-contrast",
       "holm_adjusted_p": 1.0,
       "holm_family_size": 4
     },
@@ -2315,9 +2315,9 @@
         "median_difference": 2012741066822193373,
         "rank_biserial": 9966401166164266032
       },
-      "holm_family": "primary:phase_coalescing_vs_reference",
-      "holm_adjusted_p": 0.1326959498781702,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 3,
@@ -2554,9 +2554,9 @@
         "median_difference": 15499931026595653173,
         "rank_biserial": 1101747543923531828
       },
-      "holm_family": "primary:batch_joint_presigning_vs_phase_coalesced_itemwise",
+      "holm_family": "primary:exploratory",
       "holm_adjusted_p": 1.0,
-      "holm_family_size": 4
+      "holm_family_size": 20
     },
     {
       "participants": 3,
@@ -2793,9 +2793,9 @@
         "median_difference": 2420879710782124787,
         "rank_biserial": 2732173700930986350
       },
-      "holm_family": "primary:batch_joint_presigning_vs_reference",
-      "holm_adjusted_p": 0.24526977580239914,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 3,
@@ -3032,7 +3032,7 @@
         "median_difference": 9842735546119444081,
         "rank_biserial": 7557610736091994822
       },
-      "holm_family": "primary:batch_verification_with_batch_joint_presigning",
+      "holm_family": "primary:H1-aggregate-within-shared",
       "holm_adjusted_p": 0.1254052916267696,
       "holm_family_size": 4
     },
@@ -3271,9 +3271,9 @@
         "median_difference": 15034892895270564588,
         "rank_biserial": 2525265814897122291
       },
-      "holm_family": "primary:batch_verification_with_phase_coalescing",
+      "holm_family": "primary:exploratory",
       "holm_adjusted_p": 1.0,
-      "holm_family_size": 4
+      "holm_family_size": 20
     },
     {
       "participants": 3,
@@ -3510,7 +3510,7 @@
         "median_difference": 476395740673351024,
         "rank_biserial": 6849410817751493194
       },
-      "holm_family": "primary:batch_joint_presigning_vs_phase_coalesced_aggregate",
+      "holm_family": "primary:H2-envelope-beyond-phase-coalescing",
       "holm_adjusted_p": 0.5389573240328934,
       "holm_family_size": 4
     },
@@ -3750,9 +3750,9 @@
         "median_difference": 4986281832021246496,
         "rank_biserial": 18258432983810643145
       },
-      "holm_family": "primary:session_verification_interaction",
-      "holm_adjusted_p": 0.9166264338550308,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 5,
@@ -3989,7 +3989,7 @@
         "median_difference": 14967017255898805258,
         "rank_biserial": 5275943026030264388
       },
-      "holm_family": "primary:complete_method_vs_reference",
+      "holm_family": "primary:H3-secondary-system-contrast",
       "holm_adjusted_p": 1.0,
       "holm_family_size": 4
     },
@@ -4228,9 +4228,9 @@
         "median_difference": 5876432373306142666,
         "rank_biserial": 10804386438997095092
       },
-      "holm_family": "primary:phase_coalescing_vs_reference",
-      "holm_adjusted_p": 0.6849466319950608,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 5,
@@ -4467,9 +4467,9 @@
         "median_difference": 15383057886726722660,
         "rank_biserial": 136342969685241538
       },
-      "holm_family": "primary:batch_joint_presigning_vs_phase_coalesced_itemwise",
+      "holm_family": "primary:exploratory",
       "holm_adjusted_p": 1.0,
-      "holm_family_size": 4
+      "holm_family_size": 20
     },
     {
       "participants": 5,
@@ -4706,9 +4706,9 @@
         "median_difference": 15784405280354209927,
         "rank_biserial": 9579642798463000907
       },
-      "holm_family": "primary:batch_joint_presigning_vs_reference",
-      "holm_adjusted_p": 0.24526977580239914,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 5,
@@ -4945,7 +4945,7 @@
         "median_difference": 10440809874418808478,
         "rank_biserial": 402311775516627162
       },
-      "holm_family": "primary:batch_verification_with_batch_joint_presigning",
+      "holm_family": "primary:H1-aggregate-within-shared",
       "holm_adjusted_p": 0.15784107454075672,
       "holm_family_size": 4
     },
@@ -5184,9 +5184,9 @@
         "median_difference": 16510831262596414389,
         "rank_biserial": 12455807601902245043
       },
-      "holm_family": "primary:batch_verification_with_phase_coalescing",
+      "holm_family": "primary:exploratory",
       "holm_adjusted_p": 1.0,
-      "holm_family_size": 4
+      "holm_family_size": 20
     },
     {
       "participants": 5,
@@ -5423,7 +5423,7 @@
         "median_difference": 13326359085702875670,
         "rank_biserial": 9348923910364713388
       },
-      "holm_family": "primary:batch_joint_presigning_vs_phase_coalesced_aggregate",
+      "holm_family": "primary:H2-envelope-beyond-phase-coalescing",
       "holm_adjusted_p": 0.5389573240328934,
       "holm_family_size": 4
     },
@@ -5663,9 +5663,9 @@
         "median_difference": 438464308820698043,
         "rank_biserial": 11863977189896814130
       },
-      "holm_family": "primary:session_verification_interaction",
-      "holm_adjusted_p": 0.6426623567984033,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 8,
@@ -5902,7 +5902,7 @@
         "median_difference": 18085821067756387735,
         "rank_biserial": 292164873578990904
       },
-      "holm_family": "primary:complete_method_vs_reference",
+      "holm_family": "primary:H3-secondary-system-contrast",
       "holm_adjusted_p": 1.5586239380383637e-17,
       "holm_family_size": 4
     },
@@ -6141,9 +6141,9 @@
         "median_difference": 2302858498072853821,
         "rank_biserial": 11796650827375720205
       },
-      "holm_family": "primary:phase_coalescing_vs_reference",
-      "holm_adjusted_p": 1.5586239380383637e-17,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 7.793119690191819e-17,
+      "holm_family_size": 20
     },
     {
       "participants": 8,
@@ -6380,9 +6380,9 @@
         "median_difference": 11681316453679356377,
         "rank_biserial": 7620196396204016074
       },
-      "holm_family": "primary:batch_joint_presigning_vs_phase_coalesced_itemwise",
+      "holm_family": "primary:exploratory",
       "holm_adjusted_p": 1.0,
-      "holm_family_size": 4
+      "holm_family_size": 20
     },
     {
       "participants": 8,
@@ -6619,9 +6619,9 @@
         "median_difference": 9314637820225872304,
         "rank_biserial": 10002247556984363809
       },
-      "holm_family": "primary:batch_joint_presigning_vs_reference",
-      "holm_adjusted_p": 1.5586239380383637e-17,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 7.793119690191819e-17,
+      "holm_family_size": 20
     },
     {
       "participants": 8,
@@ -6858,7 +6858,7 @@
         "median_difference": 17757138514561433596,
         "rank_biserial": 1230520485696661844
       },
-      "holm_family": "primary:batch_verification_with_batch_joint_presigning",
+      "holm_family": "primary:H1-aggregate-within-shared",
       "holm_adjusted_p": 0.15784107454075672,
       "holm_family_size": 4
     },
@@ -7097,9 +7097,9 @@
         "median_difference": 2215450927107155592,
         "rank_biserial": 11276288249424278978
       },
-      "holm_family": "primary:batch_verification_with_phase_coalescing",
-      "holm_adjusted_p": 0.6144293367732375,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 8,
@@ -7336,7 +7336,7 @@
         "median_difference": 3506355559264249883,
         "rank_biserial": 17124156181877559727
       },
-      "holm_family": "primary:batch_joint_presigning_vs_phase_coalesced_aggregate",
+      "holm_family": "primary:H2-envelope-beyond-phase-coalescing",
       "holm_adjusted_p": 0.9178441245028052,
       "holm_family_size": 4
     },
@@ -7576,9 +7576,9 @@
         "median_difference": 14405928099643601541,
         "rank_biserial": 15625544640807133620
       },
-      "holm_family": "primary:session_verification_interaction",
-      "holm_adjusted_p": 0.9166264338550308,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 16,
@@ -7815,7 +7815,7 @@
         "median_difference": 17668683850541482095,
         "rank_biserial": 6975585386173234967
       },
-      "holm_family": "primary:complete_method_vs_reference",
+      "holm_family": "primary:H3-secondary-system-contrast",
       "holm_adjusted_p": 1.5586239380383637e-17,
       "holm_family_size": 4
     },
@@ -8054,9 +8054,9 @@
         "median_difference": 13500494161549596766,
         "rank_biserial": 5056103616737794299
       },
-      "holm_family": "primary:phase_coalescing_vs_reference",
-      "holm_adjusted_p": 1.5586239380383637e-17,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 7.793119690191819e-17,
+      "holm_family_size": 20
     },
     {
       "participants": 16,
@@ -8293,9 +8293,9 @@
         "median_difference": 4644986348206613929,
         "rank_biserial": 8928845728057864430
       },
-      "holm_family": "primary:batch_joint_presigning_vs_phase_coalesced_itemwise",
+      "holm_family": "primary:exploratory",
       "holm_adjusted_p": 1.0,
-      "holm_family_size": 4
+      "holm_family_size": 20
     },
     {
       "participants": 16,
@@ -8532,9 +8532,9 @@
         "median_difference": 5932754352175337776,
         "rank_biserial": 3629823162759369341
       },
-      "holm_family": "primary:batch_joint_presigning_vs_reference",
-      "holm_adjusted_p": 1.5586239380383637e-17,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 7.793119690191819e-17,
+      "holm_family_size": 20
     },
     {
       "participants": 16,
@@ -8771,7 +8771,7 @@
         "median_difference": 11722576485995230029,
         "rank_biserial": 14941978281456076498
       },
-      "holm_family": "primary:batch_verification_with_batch_joint_presigning",
+      "holm_family": "primary:H1-aggregate-within-shared",
       "holm_adjusted_p": 0.020958538208486196,
       "holm_family_size": 4
     },
@@ -9010,9 +9010,9 @@
         "median_difference": 317740844269352562,
         "rank_biserial": 9471416545323885416
       },
-      "holm_family": "primary:batch_verification_with_phase_coalescing",
-      "holm_adjusted_p": 0.6144293367732375,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     },
     {
       "participants": 16,
@@ -9249,7 +9249,7 @@
         "median_difference": 17221368838716700857,
         "rank_biserial": 18330592087354479879
       },
-      "holm_family": "primary:batch_joint_presigning_vs_phase_coalesced_aggregate",
+      "holm_family": "primary:H2-envelope-beyond-phase-coalescing",
       "holm_adjusted_p": 0.5389573240328934,
       "holm_family_size": 4
     },
@@ -9489,9 +9489,9 @@
         "median_difference": 16865851126740247461,
         "rank_biserial": 2776763972569315262
       },
-      "holm_family": "primary:session_verification_interaction",
-      "holm_adjusted_p": 0.9166264338550308,
-      "holm_family_size": 4
+      "holm_family": "primary:exploratory",
+      "holm_adjusted_p": 1.0,
+      "holm_family_size": 20
     }
   ],
   "integrity": {

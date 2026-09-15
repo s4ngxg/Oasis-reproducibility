@@ -56,6 +56,15 @@ COMPARISONS = {
     ),
 }
 
+SCIENTIFIC_HYPOTHESES = {
+    "batch_verification_with_batch_joint_presigning":
+        "H1-aggregate-within-shared",
+    "batch_joint_presigning_vs_phase_coalesced_aggregate":
+        "H2-envelope-beyond-phase-coalescing",
+    "complete_method_vs_reference":
+        "H3-secondary-system-contrast",
+}
+
 
 def percentile(values: list[float], fraction: float) -> float:
     ordered = sorted(values)
@@ -187,15 +196,26 @@ def holm_adjust_family(rows: list[dict[str, object]]) -> None:
 def apply_holm_families(rows: list[dict[str, object]]) -> None:
     families: dict[tuple[object, ...], list[dict[str, object]]] = defaultdict(list)
     for row in rows:
-        # p=1 is the one-pair primary estimand; only p>1 belongs to load.
-        if int(row["concurrent_pairs"]) == 1:
-            family = ("primary", row["comparison"])
+        comparison = str(row["comparison"])
+        hypothesis = SCIENTIFIC_HYPOTHESES.get(comparison, "exploratory")
+        pairs = int(row["concurrent_pairs"])
+        # Load p=1 rows are anchors for a different metric regime, not inferential
+        # members of the high-load family.
+        if pairs == 1:
+            family = ("primary", hypothesis)
+        elif pairs > 1:
+            family = ("high-load", hypothesis)
         else:
-            family = ("load", int(row["participants"]), row["comparison"])
+            family = ("descriptive", "invalid")
         row["holm_family"] = ":".join(str(value) for value in family)
-        families[family].append(row)
+        if family[0] != "descriptive":
+            families[family].append(row)
     for family_rows in families.values():
         holm_adjust_family(family_rows)
+    for row in rows:
+        if row["holm_family"].startswith("descriptive:"):
+            row["holm_adjusted_p"] = 1.0
+            row["holm_family_size"] = 0
 
 
 def sample_key(row: dict[str, object]) -> tuple[int, int, str, int]:
@@ -1356,8 +1376,10 @@ def main() -> int:
                 "correction=false; method=auto"
             ),
             "holm_families": (
-                "primary: one comparison across n within a route; load: one "
-                "comparison across p for fixed route and n"
+                "analysis-pipeline-defined H1 aggregate-within-shared, H2 "
+                "envelope-beyond-phase-coalescing, H3 secondary system contrast, "
+                "and one exploratory family for remaining contrasts; primary and "
+                "high-load estimands are separate"
             ),
             "effect_size": (
                 "matched-pairs rank-biserial correlation with paired-bootstrap "

@@ -7,7 +7,7 @@
       "schema": "oasis-preswap-cloud-analysis-v5",
       "campaign_id": "preswap-eu-primary-v3-final",
       "route": "eu_to_us",
-      "sha256": "f9768bada2f51f0b65aa861f6b90f2733de70a678b3298353ed1cbf1b80bebf2",
+      "sha256": "c4230d913a035348b666fe029121bda65f47f4bfd337b765620201cccee82bd4",
       "source_path": "results/raw-analysis/eu_primary.json"
     },
     {
@@ -16,7 +16,7 @@
       "schema": "oasis-preswap-cloud-analysis-v5",
       "campaign_id": "preswap-eu-load-v3-final",
       "route": "eu_to_us",
-      "sha256": "a3029c7b61cbd522e31a21ca0c97a44f220d3d8841f450a7b3895adf74e93ff0",
+      "sha256": "360f1f704561d98d099c8fab10d593d7343467c5e1c835ab9b3809ecb1232a49",
       "source_path": "results/raw-analysis/eu_load.json"
     },
     {
@@ -25,7 +25,7 @@
       "schema": "oasis-preswap-cloud-analysis-v5",
       "campaign_id": "preswap-sg-primary-v3-final",
       "route": "sg_to_us",
-      "sha256": "de5cfd4fd9eb45c1c226c7f08501e03b464227e1bf97ac6265945761da13bc13",
+      "sha256": "055ad4919680029533c6397e133d7d86ae63641a48506f02867d3415e2e8e40c",
       "source_path": "results/raw-analysis/sg_primary.json"
     },
     {
@@ -34,7 +34,7 @@
       "schema": "oasis-preswap-cloud-analysis-v5",
       "campaign_id": "preswap-sg-load-v3-final",
       "route": "sg_to_us",
-      "sha256": "16924936ddb0d2e153d552c90b23d02a4e9b6b3baacae817916effb04b0fa6f0",
+      "sha256": "ca6149f771bdfa2e05c4f8e36fa52e073437bdae129e89bc33381b215511b209",
       "source_path": "results/raw-analysis/sg_load.json"
     },
     {

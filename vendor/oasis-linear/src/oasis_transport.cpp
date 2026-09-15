@@ -106,6 +106,7 @@ struct Config {
     int listen_backlog = 512;
     int pair_thread_stack_kb = 128;
     int session_cache_capacity = 65536;
+    int replay_retention_capacity = 262144;
     int threads =
         std::max(2u, std::thread::hardware_concurrency());
     std::uint64_t vectors = 100000;
@@ -121,6 +122,7 @@ struct Config {
     bool allow_failures = false;
     bool replay_probe = false;
     bool reconnect_probe = false;
+    bool eviction_replay_probe = false;
 };
 
 std::vector<std::string> split(const std::string& value, char delimiter) {
@@ -213,6 +215,8 @@ Config parse_args(int argc, char** argv) {
             config.replay_probe = true;
         } else if (argument == "--reconnect-probe") {
             config.reconnect_probe = true;
+        } else if (argument == "--eviction-replay-probe") {
+            config.eviction_replay_probe = true;
         } else if (argument == "--cert") {
             config.tls_cert = value();
         } else if (argument == "--key") {
@@ -251,6 +255,8 @@ Config parse_args(int argc, char** argv) {
             config.pair_thread_stack_kb = std::stoi(value());
         } else if (argument == "--session-cache-capacity") {
             config.session_cache_capacity = std::stoi(value());
+        } else if (argument == "--replay-retention-capacity") {
+            config.replay_retention_capacity = std::stoi(value());
         } else if (argument == "--threads") {
             config.threads = std::stoi(value());
         } else if (argument == "--vectors") {
@@ -301,7 +307,9 @@ Config parse_args(int argc, char** argv) {
                 config.pair_thread_stack_kb >= 64 &&
                 config.pair_thread_stack_kb <= 8192 &&
                 config.session_cache_capacity > 0 &&
-                config.session_cache_capacity <= 1000000,
+                config.session_cache_capacity <= 1000000 &&
+                config.replay_retention_capacity > 0 &&
+                config.replay_retention_capacity <= 1000000,
             "invalid positive integer option");
     require(!config.n_values.empty() && !config.variants.empty(),
             "n-values and variants must not be empty");
@@ -354,6 +362,7 @@ void print_help() {
         << "  --io-timeout-seconds N --listen-backlog N\n"
         << "  --pair-thread-stack-kb N\n"
         << "  --session-cache-capacity N\n"
+        << "  --replay-retention-capacity N\n"
         << "  --server-metrics PATH\n"
         << "  --inject-bad-partials N  Batch-verification fault injection\n"
         << "  --inject-bad-client-partials N  Initiator fault injection\n"
@@ -367,6 +376,7 @@ void print_help() {
            "a nonzero exit\n"
         << "  --replay-probe  Retransmit persistent-session payloads\n"
         << "  --reconnect-probe  Verify replay after a lost DONE receipt\n"
+        << "  --eviction-replay-probe  Verify replay after hot-cache eviction\n"
         << "Test option:\n"
         << "  --vectors N --vector-offset N\n";
 }
@@ -1620,9 +1630,13 @@ struct StoredServerSession {
 
 class ServerSessionStore {
 public:
-    explicit ServerSessionStore(std::size_t capacity)
-        : capacity_(capacity) {
+    ServerSessionStore(std::size_t capacity,
+                       std::size_t replay_retention_capacity)
+        : capacity_(capacity),
+          replay_retention_capacity_(replay_retention_capacity) {
         require(capacity_ > 0, "session cache capacity must be positive");
+        require(replay_retention_capacity_ > 0,
+                "replay retention capacity must be positive");
     }
 
     template <typename Factory>
@@ -1636,6 +1650,13 @@ public:
                         init_payload,
                     "conflicting INIT replay");
             return found->second;
+        }
+        const auto retained = replay_retention_.find(key);
+        if (retained != replay_retention_.end()) {
+            require(retained->second->session.init_payload ==
+                        init_payload,
+                    "conflicting INIT replay");
+            return retained->second;
         }
         evict_if_needed();
         auto stored = std::make_shared<StoredServerSession>(
@@ -1656,6 +1677,13 @@ private:
                 continue;
             }
             if (found->second.use_count() == 1) {
+                require(replay_retention_.size() <
+                            replay_retention_capacity_,
+                        "replay retention capacity exhausted");
+                const auto inserted = replay_retention_.emplace(
+                    key, found->second);
+                require(inserted.second,
+                        "duplicate replay-retention session");
                 sessions_.erase(found);
             } else {
                 insertion_order_.push_back(key);
@@ -1666,9 +1694,12 @@ private:
     }
 
     const std::size_t capacity_;
+    const std::size_t replay_retention_capacity_;
     std::mutex mutex_;
     std::map<SessionKey,
              std::shared_ptr<StoredServerSession>> sessions_;
+    std::map<SessionKey,
+             std::shared_ptr<StoredServerSession>> replay_retention_;
     std::deque<SessionKey> insertion_order_;
 };
 
@@ -2630,7 +2661,9 @@ ConnectionResult run_protocol_connection(
 void run_reconnect_probe(const Config& config,
                          const Crypto& crypto,
                          const Workload& client_workload,
-                         SSL_CTX* tls_context) {
+                         SSL_CTX* tls_context,
+                         const Scalar& client_master_secret,
+                         bool force_hot_cache_eviction) {
     Bytes expected_init;
     Bytes expected_commit;
     Bytes expected_nonce;
@@ -2638,6 +2671,22 @@ void run_reconnect_probe(const Config& config,
     Bytes expected_final;
     std::unique_ptr<ClientSession> session;
     for (int connection = 0; connection < 2; ++connection) {
+        if (connection == 1 && force_hot_cache_eviction) {
+            Workload pressure = oasis::make_paraswap_public_workload(
+                crypto, client_workload.n,
+                oasis::digest_from_u64(
+                    crypto, 0x4556494354494f4eULL),
+                client_workload.key_epoch,
+                client_workload.expiry,
+                client_workload.pair_id + 1,
+                client_workload.execution_id + 1,
+                client_workload.arc_index);
+            oasis::attach_client_key_shares(
+                crypto, pressure, client_master_secret);
+            (void)run_protocol_connection(
+                config, crypto, pressure,
+                Variant::B1PersistentSequential, {0}, tls_context);
+        }
         const std::string peer_name =
             config.server_name.empty() ? config.host
                                        : config.server_name;
@@ -2710,6 +2759,43 @@ void run_reconnect_probe(const Config& config,
                     "reconnect probe DONE receive failed");
             require_done(done);
         }
+    }
+    if (force_hot_cache_eviction) {
+        const std::string peer_name =
+            config.server_name.empty() ? config.host
+                                       : config.server_name;
+        Channel channel(
+            connect_to(config.host, config.port,
+                       config.io_timeout_seconds),
+            tls_context, false, peer_name);
+        IoCounters io;
+        Workload workload = client_workload;
+        require(send_frame(
+                    channel,
+                    encode_hello(
+                        Variant::B1PersistentSequential,
+                        workload, 1, config),
+                    io),
+                "conflicting replay probe HELLO send failed");
+        Bytes hello_ack;
+        require(receive_frame(channel, hello_ack, io),
+                "conflicting replay probe HELLO_ACK receive failed");
+        decode_hello_ack(hello_ack, workload, crypto);
+        Bytes conflicting_init = expected_init;
+        require(!conflicting_init.empty(),
+                "conflicting replay probe has no INIT payload");
+        conflicting_init.back() ^= 1;
+        require(send_frame(channel, conflicting_init, io),
+                "conflicting replay probe INIT send failed");
+        Bytes response;
+        bool rejected = false;
+        try {
+            rejected = !receive_frame(channel, response, io);
+        } catch (const std::exception&) {
+            rejected = true;
+        }
+        require(rejected,
+                "conflicting replay after eviction was accepted");
     }
 }
 
@@ -3004,7 +3090,8 @@ NetworkAggregate run_network_variant(
 }
 
 void run_client(const Config& config, const Crypto& crypto) {
-    if (config.replay_probe || config.reconnect_probe) {
+    if (config.replay_probe || config.reconnect_probe ||
+        config.eviction_replay_probe) {
         require(config.variants.size() == 1 &&
                     config.variants.front() ==
                         Variant::B1PersistentSequential,
@@ -3015,7 +3102,7 @@ void run_client(const Config& config, const Crypto& crypto) {
     std::uint64_t total_failures = 0;
     std::mt19937 order_generator(0x434c4f55U);
     const Scalar client_master_secret = crypto.random_scalar();
-    if (config.reconnect_probe) {
+    if (config.reconnect_probe || config.eviction_replay_probe) {
         const std::uint32_t n = config.n_values.front();
         Workload probe = oasis::make_paraswap_public_workload(
             crypto, n,
@@ -3025,8 +3112,14 @@ void run_client(const Config& config, const Crypto& crypto) {
         oasis::attach_client_key_shares(
             crypto, probe, client_master_secret);
         run_reconnect_probe(
-            config, crypto, probe, tls_context.get());
-        std::cout << "reconnect_probe=pass\n";
+            config, crypto, probe, tls_context.get(),
+            client_master_secret, config.eviction_replay_probe);
+        std::cout << (config.eviction_replay_probe
+                          ? "eviction_replay_probe=pass\n"
+                          : "reconnect_probe=pass\n");
+        if (config.eviction_replay_probe) {
+            return;
+        }
     }
     PairThreadExecutor executor(
         static_cast<std::size_t>(config.pairs),
@@ -3721,7 +3814,8 @@ void run_server(const Config& config, const Crypto& crypto) {
 
     MetricsWriter metrics(config.server_metrics);
     ServerSessionStore session_store(
-        static_cast<std::size_t>(config.session_cache_capacity));
+        static_cast<std::size_t>(config.session_cache_capacity),
+        static_cast<std::size_t>(config.replay_retention_capacity));
     std::atomic<std::uint32_t> active{0};
     std::atomic<std::uint32_t> max_active{0};
     const Scalar server_master_secret = crypto.random_scalar();
@@ -3746,6 +3840,8 @@ void run_server(const Config& config, const Crypto& crypto) {
               << " listen_backlog=" << config.listen_backlog
               << " session_cache_capacity="
               << config.session_cache_capacity
+              << " replay_retention_capacity="
+              << config.replay_retention_capacity
               << " soft_nofile=" << soft_nofile_limit() << "\n";
     while (server_socket.load() >= 0) {
         sockaddr_in peer{};

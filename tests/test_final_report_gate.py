@@ -235,6 +235,54 @@ def cost_record(campaign_ids):
 
 
 class FinalReportGateTests(unittest.TestCase):
+    def test_report_holm_families_follow_scientific_hypotheses(self):
+        rows = []
+        for route in ("eu_to_us", "sg_to_us"):
+            for participants in (8, 16):
+                for pairs in (64, 128, 1024):
+                    rows.append({
+                        "route": route,
+                        "campaign_profile": "load",
+                        "participants": participants,
+                        "concurrent_pairs": pairs,
+                        "comparison": (
+                            "batch_verification_with_batch_joint_presigning"
+                        ),
+                        "wilcoxon_signed_rank_p": 0.01,
+                    })
+                    rows.append({
+                        "route": route,
+                        "campaign_profile": "load",
+                        "participants": participants,
+                        "concurrent_pairs": pairs,
+                        "comparison": "phase_coalescing_vs_reference",
+                        "wilcoxon_signed_rank_p": 0.02,
+                    })
+
+        report_builder.apply_scientific_holm_families(rows)
+
+        h1_rows = [
+            row for row in rows
+            if row["comparison"] ==
+            "batch_verification_with_batch_joint_presigning"
+        ]
+        exploratory_rows = [
+            row for row in rows
+            if row["comparison"] == "phase_coalescing_vs_reference"
+        ]
+        self.assertEqual({row["holm_family_size"] for row in h1_rows}, {12})
+        self.assertEqual(
+            {row["holm_family"] for row in h1_rows},
+            {"high-load:H1-aggregate-within-shared"},
+        )
+        self.assertEqual(
+            {row["holm_family_size"] for row in exploratory_rows}, {12}
+        )
+        self.assertEqual(
+            {row["holm_family"] for row in exploratory_rows},
+            {"high-load:exploratory"},
+        )
+
     def complete_inputs(self):
         timing = [
             timing_record(route, profile)

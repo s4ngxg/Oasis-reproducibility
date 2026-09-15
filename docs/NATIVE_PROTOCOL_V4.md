@@ -187,7 +187,10 @@ monotonic local deadline; clocks need not be synchronized. Delay may cause
 asymmetric completion and abort, which is a liveness outcome handled by the
 outer refund state machine, not a fairness guarantee.
 
-Completion records are retained for the configured experiment lifetime. A
-production deployment needs an expiry-aware retention policy tied to the host
-deadline; deleting a live record can reduce recovery availability but cannot
-make a mismatched completion pass the client's digest check.
+Completed phase records are retained in the native server's bounded in-process
+replay store when the hot session cache is pressured. If both stores are full,
+the server rejects a new session before nonce generation rather than silently
+evicting a replay-valid record. A direct-server process restart does not restore
+this in-memory store; production deployment needs expiry-aware durable tombstones
+tied to the host deadline. Deleting a live record can reduce recovery availability
+but cannot make a mismatched completion pass the client's digest check.

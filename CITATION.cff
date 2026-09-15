@@ -4,10 +4,10 @@ message: "Please cite the accompanying OASIS paper when using this artifact."
 type: software
 authors:
   - name: "OASIS artifact authors"
-version: "1.0.1"
-date-released: 2026-09-14
+version: "1.0.3"
+date-released: 2026-09-15
 license: MIT
-repository-code: "https://github.com/s4ngxg/oasis-reproducibility-artifact"
+repository-code: "https://github.com/s4ngxg/Oasis-reproducibility"
 abstract: >-
   Source code and validation harness for the OASIS Pre-swap coordination
   artifact, including a native C11/RELIC implementation, lifecycle checks,

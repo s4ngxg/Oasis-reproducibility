@@ -61,6 +61,14 @@ PRIMARY_WORKLOADS = {(n, 1) for n in (3, 5, 8, 16)}
 LOAD_WORKLOADS = {
     (n, p) for n in (8, 16) for p in (1, 64, 128, 1024)
 }
+SCIENTIFIC_HYPOTHESES = {
+    "batch_verification_with_batch_joint_presigning":
+        "H1-aggregate-within-shared",
+    "batch_joint_presigning_vs_phase_coalesced_aggregate":
+        "H2-envelope-beyond-phase-coalescing",
+    "complete_method_vs_reference":
+        "H3-secondary-system-contrast",
+}
 
 
 def timing_profile(payload: dict[str, Any]) -> str:
@@ -128,7 +136,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         return
     fields = sorted({key for row in rows for key in row})
     with path.open("w", newline="", encoding="utf-8") as output:
-        writer = csv.DictWriter(output, fieldnames=fields)
+        writer = csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -157,6 +165,47 @@ def timing_rows(records: list[dict[str, Any]]) -> tuple[list[dict], list[dict]]:
         summaries.extend({**common, **row} for row in payload["summary"])
         effects.extend({**common, **row} for row in payload["paired_effects"])
     return summaries, effects
+
+
+def holm_adjust(rows: list[dict[str, Any]]) -> None:
+    ordered = sorted(
+        enumerate(rows),
+        key=lambda item: float(item[1]["wilcoxon_signed_rank_p"]),
+    )
+    adjusted = [1.0] * len(rows)
+    running = 0.0
+    total = len(rows)
+    for rank, (original_index, row) in enumerate(ordered):
+        candidate = min(
+            1.0,
+            (total - rank) * float(row["wilcoxon_signed_rank_p"]),
+        )
+        running = max(running, candidate)
+        adjusted[original_index] = running
+    for row, value in zip(rows, adjusted):
+        row["holm_adjusted_p"] = value
+        row["holm_family_size"] = total
+
+
+def apply_scientific_holm_families(effects: list[dict[str, Any]]) -> None:
+    families: dict[str, list[dict[str, Any]]] = {}
+    for row in effects:
+        campaign_profile = str(row.get("campaign_profile", "unknown"))
+        concurrent_pairs = int(row["concurrent_pairs"])
+        if campaign_profile == "load" and concurrent_pairs == 1:
+            row["holm_family"] = "load-anchor:descriptive"
+            row["holm_family_size"] = 0
+            row["holm_adjusted_p"] = 1.0
+            continue
+        profile = "one-pair" if concurrent_pairs == 1 else "high-load"
+        hypothesis = SCIENTIFIC_HYPOTHESES.get(
+            str(row["comparison"]), "exploratory"
+        )
+        family = f"{profile}:{hypothesis}"
+        row["holm_family"] = family
+        families.setdefault(family, []).append(row)
+    for rows in families.values():
+        holm_adjust(rows)
 
 
 def profile_rows(records: list[dict[str, Any]]) -> list[dict]:
@@ -936,6 +985,16 @@ def write_report(path: Path, summaries: list[dict], effects: list[dict],
         "This report is generated only from analyzer-accepted v4 evidence. "
         "Positive reduction means the candidate is faster than its named baseline.",
         "",
+        "## Multiplicity plan",
+        "",
+        "The report-level Holm correction uses analysis-pipeline-defined scientific "
+        "families across both routes: H1 tests aggregate verification within the "
+        "shared envelope, H2 tests the shared envelope beyond phase-coalesced "
+        "aggregate verification, and secondary H3 compares the complete method "
+        "with the persistent-itemwise reference. All remaining contrasts share one "
+        "exploratory family. Primary one-pair and high-load estimands remain "
+        "separate; p=1 anchors embedded in load campaigns are descriptive only.",
+        "",
         "## Evidence inputs",
         "",
         markdown_table(
@@ -1178,6 +1237,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     figures.mkdir(parents=True, exist_ok=True)
     summaries, effects = timing_rows(timing)
+    apply_scientific_holm_families(effects)
     profiles = profile_rows(systems)
     write_csv(out / "timing_summary.csv", summaries)
     write_csv(out / "paired_effects.csv", effects)

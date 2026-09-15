@@ -290,6 +290,11 @@ archive.
 - A corrupted initiator may retain a locally computable candidate before the
   honest wrapper export gate; the artifact does not provide fair exchange.
 - High-load experiments do not establish concurrent-composition security.
+- The native server keeps completed replay records in a bounded in-process
+  retention store when the hot session cache is pressured; if both bounds are
+  full, it rejects a new session before nonce generation. Direct-server replay
+  retention does not survive process restart; production restart recovery needs
+  expiry-aware durable tombstones.
 - Evidence from a different binary, commit, schedule, or environment requires
   a new manifest and analysis.
 
