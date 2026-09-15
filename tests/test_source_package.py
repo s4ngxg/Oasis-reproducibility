@@ -76,6 +76,8 @@ class SourcePackageTests(unittest.TestCase):
                 "scripts/run_retained_arc_coordinator.py",
                 "scripts/validate_lifecycle_evidence.py",
                 "docs/FULL_CYCLE_COMPLETION_GATES.md",
+                "vendor/paraswap/two-party computation/src/preswap_client.c",
+                "vendor/paraswap/two-party computation/src/preswap_server.c",
                 "vendor/paraswap/two-party computation/src/host_ledger.c",
                 "vendor/paraswap/two-party computation/src/host_recovery.c",
                 "scripts/run_local_smoke.sh",
@@ -88,6 +90,18 @@ class SourcePackageTests(unittest.TestCase):
                 "/".join(Path(name).parts[1:]) for name in names
             }
             self.assertTrue(required.issubset(relative_names))
+
+            with tempfile.TemporaryDirectory() as extracted:
+                with tarfile.open(archive, "r:gz") as bundle:
+                    bundle.extractall(extracted)
+                packaged_root = Path(extracted) / ROOT.name
+                subprocess.run(
+                    ["sha256sum", "-c", "SOURCE_SHA256SUMS.txt"],
+                    cwd=packaged_root,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
 
 
 if __name__ == "__main__":

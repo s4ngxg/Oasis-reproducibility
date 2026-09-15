@@ -44,8 +44,6 @@ tar \
   --exclude="$BASE/vendor/paraswap/two-party computation/.local-deps" \
   --exclude="$BASE/vendor/paraswap/two-party computation/build-*" \
   --exclude="$BASE/vendor/paraswap/two-party computation/bin" \
-  --exclude="$BASE/vendor/paraswap/two-party computation/src/preswap_client.c" \
-  --exclude="$BASE/vendor/paraswap/two-party computation/src/preswap_server.c" \
   --exclude="$BASE/vendor/paraswap/vtd/.vscode" \
   --exclude="$BASE/vendor/paraswap/vtd/lib" \
   --exclude="$BASE/vendor/paraswap/vtd/vtd" \
@@ -59,7 +57,7 @@ tar \
   -czf "$TEMPORARY" -C "$PARENT" "$BASE"
 
 if tar -tzf "$TEMPORARY" | grep -E \
-  '/(\.deps|\.git|\.vscode|results|tls|auth|\.local-deps|build-[^/]+|bin|__pycache__)(/|$)|/preswap_(client|server)\.c$|/vtd/vtd$|\.pyc$|\.(a|o|so|pem|crt|pcap|pcapng|log|pid)$' \
+  '/(\.deps|\.git|\.vscode|results|tls|auth|\.local-deps|build-[^/]+|bin|__pycache__)(/|$)|/vtd/vtd$|\.pyc$|\.(a|o|so|pem|crt|pcap|pcapng|log|pid)$' \
   >/dev/null; then
   echo "error: generated archive contains excluded runtime artifacts" >&2
   rm -f "$TEMPORARY"
