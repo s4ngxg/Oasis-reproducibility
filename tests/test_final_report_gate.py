@@ -126,7 +126,7 @@ def timing_record(route, profile):
                 "bootstrap_seed_derivation": "sha256",
                 "bootstrap_interval": "paired percentile",
                 "paired_test": "wilcoxon",
-                "holm_families": "prespecified",
+                "holm_families": "analysis-pipeline-defined scientific families",
                 "effect_size": "rank-biserial with CI",
                 "sample_size_policy": {"profile": profile},
             },

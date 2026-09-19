@@ -748,8 +748,45 @@ const uint8_t *bench_active_sid(const bench_transcript_t *transcript,
 }
 
 static int pedersen_generator(ec_t generator) {
-  return deterministic_point_map(generator, "OASIS-PEDERSEN-H-POINT-v2",
-                                 NULL, 0);
+  static const uint8_t encoded[BENCH_POINT_BYTES] = {
+      0x02, 0x9b, 0xba, 0x45, 0xe1, 0xcc, 0x9b, 0x95,
+      0x14, 0xcd, 0x52, 0x0d, 0x79, 0xf6, 0x16, 0xe0,
+      0xb5, 0xc6, 0x3c, 0xbd, 0x5f, 0xad, 0x9c, 0xdf,
+      0x5a, 0xf2, 0x91, 0x00, 0xa6, 0xd2, 0xc2, 0x03,
+      0xda};
+  if (generator == NULL) return RLC_ERR;
+  ec_read_bin(generator, encoded, (int) sizeof(encoded));
+  if (ec_is_infty(generator) || !ec_on_curve(generator)) {
+    return RLC_ERR;
+  }
+  return RLC_OK;
+}
+
+int bench_pedersen_generator_kat(void) {
+  static const uint8_t expected[BENCH_POINT_BYTES] = {
+      0x02, 0x9b, 0xba, 0x45, 0xe1, 0xcc, 0x9b, 0x95,
+      0x14, 0xcd, 0x52, 0x0d, 0x79, 0xf6, 0x16, 0xe0,
+      0xb5, 0xc6, 0x3c, 0xbd, 0x5f, 0xad, 0x9c, 0xdf,
+      0x5a, 0xf2, 0x91, 0x00, 0xa6, 0xd2, 0xc2, 0x03,
+      0xda};
+  uint8_t actual[BENCH_POINT_BYTES];
+  ec_t generator;
+  int status = RLC_ERR;
+  ec_null(generator);
+  RLC_TRY {
+    ec_new(generator);
+    if (pedersen_generator(generator) != RLC_OK ||
+        point_bytes(actual, generator) != RLC_OK ||
+        memcmp(actual, expected, sizeof(expected)) != 0) {
+      RLC_THROW(ERR_NO_VALID);
+    }
+    status = RLC_OK;
+  } RLC_CATCH_ANY {
+    status = RLC_ERR;
+  } RLC_FINALLY {
+    ec_free(generator);
+  }
+  return status;
 }
 
 static int commitment_message_scalar(

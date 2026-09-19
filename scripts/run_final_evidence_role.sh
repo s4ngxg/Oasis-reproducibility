@@ -7,7 +7,7 @@ Usage:
   run_final_evidence_role.sh server ROUTE PROFILE CAMPAIGN_ID AUTH_DIR
   run_final_evidence_role.sh client ROUTE PROFILE CAMPAIGN_ID AUTH_DIR SERVER_IP
 
-PROFILE is one of: primary, load, allocation, syscall, pcap.
+PROFILE is one of: primary, load, discontinuity, allocation, syscall, pcap.
 Set DRY_RUN=1 to print and validate the schedule without starting it.
 All profiles use public service port 9000 by default and must run sequentially.
 Set BASE_PORT=N only when the deployment requires a different single port.
@@ -83,6 +83,14 @@ case "$PROFILE" in
       --concurrent-pairs 1,64,128,1024
       --trials 20
       --warmup 5
+    )
+    ;;
+  discontinuity)
+    ARGS+=(
+      --participants 3,5,6,7,8,9,12,16
+      --concurrent-pairs 1
+      --trials 50
+      --warmup 10
     )
     ;;
   allocation)

@@ -20,6 +20,9 @@ author's machines.
 - Five controlled native configurations using one workload and backend.
 - Lifecycle and ledger/VTD adapter tests for success, abort, Re-lock, refund,
   retry, replay, and invalid-input handling.
+- Durable phase-replay journal for the secondary OASIS conformance transport,
+  with process-restart regression coverage; the native path separately exposes
+  durable completion replay.
 - Pinned upstream snapshots, source locks, campaign scripts, analysis scripts,
   and tests.
 - Compact generated paper assets under `results/paper-assets/`.
@@ -54,6 +57,8 @@ and two-host component performance. It does not claim a production ParaSwap
 deployment, fair exchange, universal composability, adaptive-corruption
 security, or a general concurrent-composition theorem. High-load campaigns
 measure capacity and performance, not security under concurrent composition.
+The durable replay option and its retention policy are documented in
+`docs/DURABLE_REPLAY.md`.
 
 ## Terminology and versions
 

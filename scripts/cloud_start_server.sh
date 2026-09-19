@@ -17,6 +17,7 @@ ARGS=(
   --io-timeout-seconds "${IO_TIMEOUT_SECONDS:-600}"
   --listen-backlog "${LISTEN_BACKLOG:-4096}"
   --session-cache-capacity "${SESSION_CACHE_CAPACITY:-65536}"
+  --replay-journal "${REPLAY_JOURNAL:-$ROOT/results/cloud/server/replay-journal}"
   --inject-bad-partials "${INJECT_BAD_PARTIALS:-0}"
   --inject-bad-openings "${INJECT_BAD_OPENINGS:-0}"
   --server-metrics "${SERVER_METRICS:-$ROOT/results/cloud/server/server_metrics.jsonl}"

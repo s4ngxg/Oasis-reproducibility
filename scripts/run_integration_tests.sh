@@ -29,6 +29,7 @@ make -C "$OASIS" -j "${BUILD_JOBS:-2}"
 "$OASIS/bin/oasis_core_conformance" --vectors 32
 python3 "$ROOT/scripts/test_mtls_rejection.py"
 python3 "$ROOT/scripts/test_replay_cache_pressure.py"
+python3 "$ROOT/scripts/test_durable_phase_replay.py"
 
 python3 "$ROOT/src/paraswap_lifecycle.py" \
   --participants 3 --mode batch-joint-presigning-batch-verification --base-port 19700 \

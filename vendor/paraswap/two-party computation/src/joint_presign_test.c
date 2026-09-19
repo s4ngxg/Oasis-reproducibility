@@ -766,6 +766,11 @@ int main(int argc, char **argv) {
     return 1;
   }
   if (init() != RLC_OK) return 1;
+  if (bench_pedersen_generator_kat() != RLC_OK) {
+    fprintf(stderr, "pinned Pedersen generator KAT failed\n");
+    clean();
+    return 1;
+  }
   for (i = 0; i < vectors; i++) {
     status = run_joint_test(offset + i, !stress && i == 0);
     if (status != RLC_OK) {

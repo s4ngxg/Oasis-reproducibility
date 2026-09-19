@@ -463,7 +463,10 @@ def main():
             "wilcoxon_alternative": "two-sided",
             "wilcoxon_method": "auto",
             "wilcoxon_input": "baseline_wall_ms-candidate_wall_ms",
-            "multiple_testing": "Holm step-down within declared families",
+            "multiple_testing": (
+                "Holm step-down within analysis-pipeline-defined scientific "
+                "families; these families were not preregistered"
+            ),
         },
         "source_files": [str(path) for path in args.inputs],
         "summary": summary,

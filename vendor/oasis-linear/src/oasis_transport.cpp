@@ -1,6 +1,7 @@
 #include "oasis/core.hpp"
 
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <pthread.h>
@@ -77,6 +78,7 @@ struct Config {
     std::string bind = "0.0.0.0";
     std::string out;
     std::string server_metrics;
+    std::string replay_journal;
     std::string tls_cert;
     std::string tls_key;
     std::string tls_ca;
@@ -123,6 +125,7 @@ struct Config {
     bool replay_probe = false;
     bool reconnect_probe = false;
     bool eviction_replay_probe = false;
+    std::string durable_replay_probe;
 };
 
 std::vector<std::string> split(const std::string& value, char delimiter) {
@@ -204,6 +207,8 @@ Config parse_args(int argc, char** argv) {
             config.out = value();
         } else if (argument == "--server-metrics") {
             config.server_metrics = value();
+        } else if (argument == "--replay-journal") {
+            config.replay_journal = value();
         } else if (argument == "--tls") {
             config.tls = true;
         } else if (argument == "--mutual-tls") {
@@ -217,6 +222,8 @@ Config parse_args(int argc, char** argv) {
             config.reconnect_probe = true;
         } else if (argument == "--eviction-replay-probe") {
             config.eviction_replay_probe = true;
+        } else if (argument == "--durable-replay-probe") {
+            config.durable_replay_probe = value();
         } else if (argument == "--cert") {
             config.tls_cert = value();
         } else if (argument == "--key") {
@@ -364,6 +371,7 @@ void print_help() {
         << "  --session-cache-capacity N\n"
         << "  --replay-retention-capacity N\n"
         << "  --server-metrics PATH\n"
+        << "  --replay-journal PATH  Durable phase replay records\n"
         << "  --inject-bad-partials N  Batch-verification fault injection\n"
         << "  --inject-bad-client-partials N  Initiator fault injection\n"
         << "  --inject-bad-openings N  Responder-opening fault injection\n"
@@ -377,6 +385,7 @@ void print_help() {
         << "  --replay-probe  Retransmit persistent-session payloads\n"
         << "  --reconnect-probe  Verify replay after a lost DONE receipt\n"
         << "  --eviction-replay-probe  Verify replay after hot-cache eviction\n"
+        << "  --durable-replay-probe PATH  Replay an exact transcript from disk\n"
         << "Test option:\n"
         << "  --vectors N --vector-offset N\n";
 }
@@ -1620,6 +1629,170 @@ VerifierAuditRecord make_verifier_audit_record(
 
 using SessionKey = std::pair<Digest, std::uint32_t>;
 
+class DurableReplayJournal {
+public:
+    explicit DurableReplayJournal(std::string directory)
+        : directory_(std::move(directory)) {
+        if (!directory_.empty()) {
+            std::filesystem::create_directories(directory_);
+        }
+    }
+
+    bool enabled() const {
+        return !directory_.empty();
+    }
+
+    bool load(const SessionHeader& header, const Bytes& request,
+              Bytes& response) const {
+        if (!enabled()) {
+            return false;
+        }
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::ifstream input(record_path(header), std::ios::binary);
+        if (!input.good()) {
+            return false;
+        }
+        char magic[8]{};
+        input.read(magic, sizeof(magic));
+        require(std::memcmp(magic, "OASISRP1", sizeof(magic)) == 0,
+                "invalid replay journal magic");
+        std::uint8_t type = 0;
+        std::uint64_t request_size = 0;
+        std::uint64_t response_size = 0;
+        input.read(reinterpret_cast<char*>(&type), sizeof(type));
+        input.read(reinterpret_cast<char*>(&request_size),
+                   sizeof(request_size));
+        input.read(reinterpret_cast<char*>(&response_size),
+                   sizeof(response_size));
+        require(input.good() && type == static_cast<std::uint8_t>(
+                    header.type),
+                "invalid replay journal header");
+        require(request_size <= 64 * 1024 * 1024 &&
+                    response_size <= 64 * 1024 * 1024,
+                "replay journal record is too large");
+        Bytes stored_request(static_cast<std::size_t>(request_size));
+        Bytes stored_response(static_cast<std::size_t>(response_size));
+        if (request_size != 0) {
+            input.read(reinterpret_cast<char*>(stored_request.data()),
+                       static_cast<std::streamsize>(request_size));
+        }
+        if (response_size != 0) {
+            input.read(reinterpret_cast<char*>(stored_response.data()),
+                       static_cast<std::streamsize>(response_size));
+        }
+        require(input.good() && stored_request == request,
+                "conflicting durable replay request");
+        response = std::move(stored_response);
+        return true;
+    }
+
+    void store(const SessionHeader& header, const Bytes& request,
+               const Bytes& response) {
+        if (!enabled()) {
+            return;
+        }
+        std::lock_guard<std::mutex> lock(mutex_);
+        const auto path = record_path(header);
+        if (std::filesystem::exists(path)) {
+            Bytes existing;
+            require(load_unlocked(header, request, existing) &&
+                        existing == response,
+                    "durable replay record changed");
+            return;
+        }
+        const auto temporary = path.string() + ".tmp." +
+            std::to_string(static_cast<long long>(::getpid()));
+        {
+            std::ofstream output(temporary,
+                                 std::ios::binary | std::ios::trunc);
+            require(output.good(), "cannot create replay journal record");
+            output.write("OASISRP1", 8);
+            const auto type = static_cast<std::uint8_t>(header.type);
+            const auto request_size = static_cast<std::uint64_t>(
+                request.size());
+            const auto response_size = static_cast<std::uint64_t>(
+                response.size());
+            output.write(reinterpret_cast<const char*>(&type), sizeof(type));
+            output.write(reinterpret_cast<const char*>(&request_size),
+                         sizeof(request_size));
+            output.write(reinterpret_cast<const char*>(&response_size),
+                         sizeof(response_size));
+            if (!request.empty()) {
+                output.write(reinterpret_cast<const char*>(request.data()),
+                             static_cast<std::streamsize>(request.size()));
+            }
+            if (!response.empty()) {
+                output.write(reinterpret_cast<const char*>(response.data()),
+                             static_cast<std::streamsize>(response.size()));
+            }
+            output.flush();
+            require(output.good(), "cannot write replay journal record");
+        }
+        const int descriptor = ::open(temporary.c_str(), O_RDONLY | O_CLOEXEC);
+        require(descriptor >= 0 && ::fsync(descriptor) == 0,
+                "cannot fsync replay journal record");
+        ::close(descriptor);
+        require(::rename(temporary.c_str(), path.c_str()) == 0,
+                "cannot publish replay journal record");
+        const int directory_descriptor =
+            ::open(directory_.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+        require(directory_descriptor >= 0 &&
+                    ::fsync(directory_descriptor) == 0,
+                "cannot fsync replay journal directory");
+        ::close(directory_descriptor);
+    }
+
+private:
+    std::filesystem::path record_path(const SessionHeader& header) const {
+        return std::filesystem::path(directory_) /
+            (oasis::hex(header.sid) + "-" +
+             std::to_string(header.logical_id) + "-" +
+             std::to_string(static_cast<unsigned>(header.type)) + ".journal");
+    }
+
+    bool load_unlocked(const SessionHeader& header, const Bytes& request,
+                       Bytes& response) const {
+        std::ifstream input(record_path(header), std::ios::binary);
+        if (!input.good()) {
+            return false;
+        }
+        char magic[8]{};
+        input.read(magic, sizeof(magic));
+        std::uint8_t type = 0;
+        std::uint64_t request_size = 0;
+        std::uint64_t response_size = 0;
+        input.read(reinterpret_cast<char*>(&type), sizeof(type));
+        input.read(reinterpret_cast<char*>(&request_size),
+                   sizeof(request_size));
+        input.read(reinterpret_cast<char*>(&response_size),
+                   sizeof(response_size));
+        require(std::memcmp(magic, "OASISRP1", sizeof(magic)) == 0 &&
+                    input.good() && type == static_cast<std::uint8_t>(
+                        header.type),
+                "invalid replay journal record");
+        require(request_size <= 64 * 1024 * 1024 &&
+                    response_size <= 64 * 1024 * 1024,
+                "replay journal record is too large");
+        Bytes stored_request(static_cast<std::size_t>(request_size));
+        Bytes stored_response(static_cast<std::size_t>(response_size));
+        if (request_size != 0) {
+            input.read(reinterpret_cast<char*>(stored_request.data()),
+                       static_cast<std::streamsize>(request_size));
+        }
+        if (response_size != 0) {
+            input.read(reinterpret_cast<char*>(stored_response.data()),
+                       static_cast<std::streamsize>(response_size));
+        }
+        require(input.good() && stored_request == request,
+                "conflicting durable replay request");
+        response = std::move(stored_response);
+        return true;
+    }
+
+    std::string directory_;
+    mutable std::mutex mutex_;
+};
+
 struct StoredServerSession {
     explicit StoredServerSession(ServerSession value)
         : session(std::move(value)) {}
@@ -1765,6 +1938,21 @@ void decode_client_nonces(const Bytes& payload,
                 header.sid == session.sid &&
                 header.indices == session.indices,
             "CLIENT_NONCE header mismatch");
+    for (auto& transcript : session.transcripts) {
+        transcript.client_nonce_point = reader.array<33>();
+    }
+    reader.finish();
+}
+
+void decode_client_nonce_points(const Bytes& payload,
+                                ClientSession& session) {
+    Reader reader(payload);
+    const auto header = read_session_header(reader);
+    require(header.type == MessageType::ClientNonce &&
+                header.logical_id == session.logical_id &&
+                header.sid == session.sid &&
+                header.indices == session.indices,
+            "CLIENT_NONCE replay header mismatch");
     for (auto& transcript : session.transcripts) {
         transcript.client_nonce_point = reader.array<33>();
     }
@@ -2799,6 +2987,129 @@ void run_reconnect_probe(const Config& config,
     }
 }
 
+void write_replay_transcript(const std::string& path,
+                             const std::vector<Bytes>& frames) {
+    ensure_parent(path);
+    const std::string temporary = path + ".tmp." +
+        std::to_string(static_cast<long long>(::getpid()));
+    std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+    require(output.good(), "cannot create replay transcript");
+    output.write("OASISTR1", 8);
+    const auto count = static_cast<std::uint32_t>(frames.size());
+    output.write(reinterpret_cast<const char*>(&count), sizeof(count));
+    for (const auto& frame : frames) {
+        const auto size = static_cast<std::uint64_t>(frame.size());
+        output.write(reinterpret_cast<const char*>(&size), sizeof(size));
+        if (!frame.empty()) {
+            output.write(reinterpret_cast<const char*>(frame.data()),
+                         static_cast<std::streamsize>(frame.size()));
+        }
+    }
+    output.flush();
+    require(output.good(), "cannot write replay transcript");
+    output.close();
+    require(::rename(temporary.c_str(), path.c_str()) == 0,
+            "cannot publish replay transcript");
+}
+
+std::vector<Bytes> read_replay_transcript(const std::string& path) {
+    std::ifstream input(path, std::ios::binary);
+    require(input.good(), "cannot open replay transcript");
+    char magic[8]{};
+    input.read(magic, sizeof(magic));
+    require(std::memcmp(magic, "OASISTR1", sizeof(magic)) == 0,
+            "invalid replay transcript magic");
+    std::uint32_t count = 0;
+    input.read(reinterpret_cast<char*>(&count), sizeof(count));
+    require(input.good() && count == 5,
+            "invalid replay transcript frame count");
+    std::vector<Bytes> frames;
+    frames.reserve(count);
+    for (std::uint32_t i = 0; i < count; ++i) {
+        std::uint64_t size = 0;
+        input.read(reinterpret_cast<char*>(&size), sizeof(size));
+        require(input.good() && size <= 64 * 1024 * 1024,
+                "invalid replay transcript frame size");
+        Bytes frame(static_cast<std::size_t>(size));
+        if (size != 0) {
+            input.read(reinterpret_cast<char*>(frame.data()),
+                       static_cast<std::streamsize>(size));
+        }
+        require(input.good(), "short replay transcript frame");
+        frames.push_back(std::move(frame));
+    }
+    return frames;
+}
+
+void run_durable_replay_probe(const Config& config,
+                              const Crypto& crypto,
+                              const Workload& client_workload,
+                              SSL_CTX* tls_context,
+                              const Scalar& client_master_secret) {
+    const bool replay = std::filesystem::exists(
+        config.durable_replay_probe);
+    const auto recorded = replay
+        ? read_replay_transcript(config.durable_replay_probe)
+        : std::vector<Bytes>{};
+    const std::string peer_name = config.server_name.empty()
+        ? config.host : config.server_name;
+    Channel channel(connect_to(config.host, config.port,
+                               config.io_timeout_seconds),
+                    tls_context, false, peer_name);
+    IoCounters io;
+    Workload workload = client_workload;
+    require(send_frame(channel,
+                       encode_hello(Variant::B1PersistentSequential,
+                                    workload, 1, config), io),
+            "durable replay HELLO send failed");
+    Bytes hello_ack;
+    require(receive_frame(channel, hello_ack, io),
+            "durable replay HELLO_ACK receive failed");
+    decode_hello_ack(hello_ack, workload, crypto);
+    ClientSession session = make_client_session(
+        crypto, workload, Variant::B1PersistentSequential, 0, {0});
+    const Bytes init = replay ? recorded[0] : encode_init(session);
+    require(send_frame(channel, init, io),
+            "durable replay INIT send failed");
+    Bytes commit;
+    require(receive_frame(channel, commit, io),
+            "durable replay COMMIT receive failed");
+    if (replay) {
+        require(commit == recorded[1],
+                "durable replay COMMIT changed after restart");
+    }
+    decode_commit(commit, session);
+    const Bytes nonce = replay
+        ? recorded[2] : encode_client_nonces(session, crypto);
+    if (replay) {
+        decode_client_nonce_points(nonce, session);
+    }
+    require(send_frame(channel, nonce, io),
+            "durable replay CLIENT_NONCE send failed");
+    Bytes open;
+    require(receive_frame(channel, open, io),
+            "durable replay SERVER_OPEN receive failed");
+    if (replay) {
+        require(open == recorded[3],
+                "durable replay SERVER_OPEN changed after restart");
+    }
+    require(decode_server_open(open, session, crypto, workload).empty(),
+            "durable replay opening verification failed");
+    const Bytes final_payload = replay
+        ? recorded[4] : encode_client_final(session, crypto, workload);
+    require(send_frame(channel, final_payload, io),
+            "durable replay CLIENT_FINAL send failed");
+    Bytes done;
+    require(receive_frame(channel, done, io),
+            "durable replay DONE receive failed");
+    require_done(done);
+    if (!replay) {
+        write_replay_transcript(config.durable_replay_probe,
+                                {init, commit, nonce, open, final_payload});
+    }
+    (void)client_master_secret;
+}
+
 struct NetworkAggregate {
     std::uint64_t sent = 0;
     std::uint64_t received = 0;
@@ -3091,7 +3402,8 @@ NetworkAggregate run_network_variant(
 
 void run_client(const Config& config, const Crypto& crypto) {
     if (config.replay_probe || config.reconnect_probe ||
-        config.eviction_replay_probe) {
+        config.eviction_replay_probe ||
+        !config.durable_replay_probe.empty()) {
         require(config.variants.size() == 1 &&
                     config.variants.front() ==
                         Variant::B1PersistentSequential,
@@ -3102,6 +3414,23 @@ void run_client(const Config& config, const Crypto& crypto) {
     std::uint64_t total_failures = 0;
     std::mt19937 order_generator(0x434c4f55U);
     const Scalar client_master_secret = crypto.random_scalar();
+    if (!config.durable_replay_probe.empty()) {
+        const std::uint32_t n = config.n_values.front();
+        Workload probe = oasis::make_paraswap_public_workload(
+            crypto, n,
+            oasis::digest_from_u64(
+                crypto, 0x44555241424c4552ULL),
+            1, 3600, 0x4450524f4245ULL);
+        const Scalar probe_secret = crypto.derive_scalar(
+            "OASIS-DURABLE-PROBE-CLIENT-KEY-v1",
+            {oasis::bytes(probe.seed)});
+        oasis::attach_client_key_shares(
+            crypto, probe, probe_secret);
+        run_durable_replay_probe(
+            config, crypto, probe, tls_context.get(), probe_secret);
+        std::cout << "durable_replay_probe=pass\n";
+        return;
+    }
     if (config.reconnect_probe || config.eviction_replay_probe) {
         const std::uint32_t n = config.n_values.front();
         Workload probe = oasis::make_paraswap_public_workload(
@@ -3401,6 +3730,7 @@ void handle_connection(int fd, SSL_CTX* tls_context,
                        std::uint32_t inject_bad_partials,
                        std::uint32_t inject_bad_openings,
                        ServerSessionStore& session_store,
+                       DurableReplayJournal& replay_journal,
                        MetricsWriter& metrics,
                        std::atomic<std::uint32_t>& active,
                        std::atomic<std::uint32_t>& max_active) {
@@ -3564,6 +3894,9 @@ void handle_connection(int fd, SSL_CTX* tls_context,
                 header_reader.finish();
                 const SessionKey key{
                     header.sid, header.logical_id};
+                Bytes durable_commit;
+                const bool durable_init = replay_journal.load(
+                    header, payload, durable_commit);
                 if (hello.variant ==
                         Variant::B4BatchedVerification &&
                     header.logical_id > 0) {
@@ -3598,8 +3931,12 @@ void handle_connection(int fd, SSL_CTX* tls_context,
                 {
                     std::lock_guard<std::mutex> lock(
                         stored->mutex);
-                    response = stored->session.commit_response;
+                    response = durable_init
+                        ? durable_commit
+                        : stored->session.commit_response;
+                    stored->session.commit_response = response;
                 }
+                replay_journal.store(header, payload, response);
                 require(send_frame(channel, response, io),
                         "server COMMIT send failed");
             } else if (type == MessageType::ClientNonce) {
@@ -3612,6 +3949,14 @@ void handle_connection(int fd, SSL_CTX* tls_context,
                 auto& stored = *found->second;
                 std::lock_guard<std::mutex> lock(stored.mutex);
                 auto& session = stored.session;
+                Bytes durable_open;
+                if (replay_journal.load(header, payload, durable_open)) {
+                    session.nonce_payload = payload;
+                    session.open_response = durable_open;
+                    require(send_frame(channel, durable_open, io),
+                            "server durable SERVER_OPEN replay failed");
+                    continue;
+                }
                 if (!session.nonce_payload.empty()) {
                     require(session.nonce_payload == payload,
                             "conflicting CLIENT_NONCE replay");
@@ -3646,6 +3991,7 @@ void handle_connection(int fd, SSL_CTX* tls_context,
                     session, crypto, workload, fault_count,
                     opening_fault_count);
                 const Bytes response = session.open_response;
+                replay_journal.store(header, payload, response);
                 require(send_frame(channel, response, io),
                         "server SERVER_OPEN send failed");
             } else if (type == MessageType::RetryPlan) {
@@ -3704,6 +4050,20 @@ void handle_connection(int fd, SSL_CTX* tls_context,
                 auto& session = stored.session;
                 require(!session.nonce_payload.empty(),
                         "CLIENT_FINAL before CLIENT_NONCE");
+                Bytes durable_status;
+                if (replay_journal.load(header, payload, durable_status)) {
+                    session.final_payload = payload;
+                    session.final_status_response = durable_status;
+                    if (!durable_status.empty()) {
+                        require(send_frame(channel, durable_status, io),
+                                "server durable FINAL_STATUS replay failed");
+                    }
+                    if (finished_ids.insert(
+                            header.logical_id).second) {
+                        ++finished;
+                    }
+                    continue;
+                }
                 if (!session.final_payload.empty()) {
                     require(session.final_payload == payload,
                             "conflicting CLIENT_FINAL replay");
@@ -3746,10 +4106,15 @@ void handle_connection(int fd, SSL_CTX* tls_context,
                             "too many initiator retry sessions");
                     session.final_status_response =
                         encode_final_status(session, bad_indices);
+                    replay_journal.store(
+                        header, payload, session.final_status_response);
                     require(send_frame(
                                 channel,
                                 session.final_status_response, io),
-                            "server FINAL_STATUS send failed");
+                                "server FINAL_STATUS send failed");
+                }
+                if (session.final_status_response.empty()) {
+                    replay_journal.store(header, payload, Bytes{});
                 }
                 session.final_payload = payload;
                 if (finished_ids.insert(header.logical_id).second) {
@@ -3816,9 +4181,15 @@ void run_server(const Config& config, const Crypto& crypto) {
     ServerSessionStore session_store(
         static_cast<std::size_t>(config.session_cache_capacity),
         static_cast<std::size_t>(config.replay_retention_capacity));
+    DurableReplayJournal replay_journal(config.replay_journal);
     std::atomic<std::uint32_t> active{0};
     std::atomic<std::uint32_t> max_active{0};
-    const Scalar server_master_secret = crypto.random_scalar();
+    const Scalar server_master_secret = config.replay_journal.empty()
+        ? crypto.random_scalar()
+        : crypto.derive_scalar(
+              "OASIS-DURABLE-JOURNAL-SERVER-KEY-v1",
+              {Bytes(config.replay_journal.begin(),
+                     config.replay_journal.end())});
     auto worker = [&](int client_fd) {
         handle_connection(client_fd, tls_context.get(), crypto,
                           server_master_secret,
@@ -3827,6 +4198,7 @@ void run_server(const Config& config, const Crypto& crypto) {
                           static_cast<std::uint32_t>(
                               config.inject_bad_openings),
                           session_store,
+                          replay_journal,
                           metrics, active,
                           max_active);
     };
@@ -3842,6 +4214,9 @@ void run_server(const Config& config, const Crypto& crypto) {
               << config.session_cache_capacity
               << " replay_retention_capacity="
               << config.replay_retention_capacity
+              << " replay_journal="
+              << (config.replay_journal.empty()
+                      ? "disabled" : config.replay_journal)
               << " soft_nofile=" << soft_nofile_limit() << "\n";
     while (server_socket.load() >= 0) {
         sockaddr_in peer{};

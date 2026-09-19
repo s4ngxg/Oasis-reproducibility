@@ -238,6 +238,7 @@ int bench_digest_equal(const uint8_t left[BENCH_DIGEST_BYTES],
                        const uint8_t right[BENCH_DIGEST_BYTES]);
 int bench_random_salt(uint8_t salt[BENCH_SALT_BYTES]);
 int bench_validate_secp256k1(void);
+int bench_pedersen_generator_kat(void);
 int bench_validate_joint_public_key(const ec_t client_public_key,
                                     const ec_t server_public_key,
                                     const ec_t joint_public_key);
